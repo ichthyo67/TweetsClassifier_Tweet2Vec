@@ -8,7 +8,7 @@ based on Tweet2Vec implementation by bdhingra https://github.com/bdhingra/tweet2
 '''
 
 #input
-NTWEETS = 200
+NTWEETS = 20
 
 # network size
 CHAR_DIM = 10000  # 7000 for 5000 NTweets dimensionality of the character embeddings lookup

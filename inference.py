@@ -88,7 +88,7 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     precisions = []
     recalls0 = []
     recalls1 = []
-
+    count_corrections = 0
     for xr, y in test_iter:
         n_testsamples +=len(xr)
         preds = []
@@ -97,16 +97,26 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
         #xr, y = testBatches[i] #list
         x, x_m = prepare_data(xr, chardict, n_chars=n_char)
         vp = predict(x, x_m)
-
+        #print("VP", vp)
         #np.argsort returns [0, 1] or [1, 0] according to vp floats
         #TODO: add weights to certain characters here or earlier?
         ranks = np.argsort(vp)[:, ::-1]
-        print("RANKS", ranks)
+        #print("RANKS", ranks)
         for idx, item in enumerate(xr):
+            corr = False
+            if ranks[idx,:][0] == 1:
+                if abs(vp[idx][0] - vp[idx][1]) < 0.60:
+                    ranks[idx,:][0] = 0
+                    ranks[idx,:][1] = 1
+                    count_corrections += 1
+                    corr = True
             preds.append(ranks[idx,:])
             targs.append(y[idx])
             #print("Xt LEN", len(Xt), "INDEX: ", idx)
-            print(xr[idx], ranks[idx,:][0], y[idx])
+            if not corr:
+                print(xr[idx], ranks[idx,:][0], y[idx])
+            else:
+                print(xr[idx], ranks[idx,:][0], y[idx], "correction due to", vp[idx])
             #print(Xt[idx], ranks[idx][0], y[idx])
         print("Predictions", [ranks[0] for ranks in preds])
         print("Targets", y)
@@ -144,6 +154,7 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     print("Mean Recall 0", statistics.mean(recalls0), "Stdev", statistics.stdev(recalls0))
     print("Mean Recall 1", statistics.mean(recalls1), "Stdev", statistics.stdev(recalls1))
 
+    print("corrections with higher threshold (0.80):", count_corrections)
     print("#" * 20)
 
 
