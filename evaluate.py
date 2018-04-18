@@ -34,6 +34,6 @@ def recall(p, t, tx):
             tp += 1
         elif t[i] == tx and p[i] != tx:
             fn += 1
-    if (tp + fn) == 0:
+    if (tp + fn) == 0.0:
         return 0.0
     return (tp / (tp + fn))

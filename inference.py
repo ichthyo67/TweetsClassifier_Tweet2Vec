@@ -58,7 +58,7 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
 
     n_char = len(chardict.keys()) + 1
     n_classes = len(labeldict.keys())
-
+    print("Labeldict:", labeldict)
     print("Building network...")
 
     # Tweet variables
@@ -90,6 +90,7 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     recalls1 = []
     #corrections with new threshold
     count_corrections = 0
+    classified_1 = 0 #how many were classified in total?
     for xr, y in test_iter:
         n_testsamples +=len(xr)
         preds = []
@@ -106,11 +107,13 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
         for idx, item in enumerate(xr):
             corr = False
             if ranks[idx,:][0] == 1:
-                if vp[idx][0] < TRSH_CLSSFCN:
+                if vp[idx][1] < TRSH_CLSSFCN:
                     ranks[idx,:][0] = 0
                     ranks[idx,:][1] = 1
                     count_corrections += 1
                     corr = True
+                else:
+                    classified_1 += 1
             preds.append(ranks[idx,:])
             targs.append(y[idx])
             #print("Xt LEN", len(Xt), "INDEX: ", idx)
@@ -146,8 +149,8 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     print("#"*10, "FINAL OUTPUT", "#"*10)
     print()
     print("%d Tweets tested"%n_testsamples)
+    print("%d classified 1"%classified_1)
     print("corrections with higher threshold", TRSH_CLSSFCN, ":", count_corrections)
-
     print("Mean Precision weighted", precision_mean / n_testsamples)
     print("Max Precision on Batch", maxprec)
     #standarddeviation = sum((-precision_mean + [prec for prec in precisions])) * 1/(1-n_testsamples)
