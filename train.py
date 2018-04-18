@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 ischwaninger / svakulenko
-02 Mar 2018
+18 Apr 2018
 
 Training a character-level NN classifier based on Tweet2Vec implementation by bdhingra
 https://github.com/bdhingra/tweet2vec
@@ -108,7 +108,7 @@ class BatchTweets():
         tags = []
         for l in targets:
             #print(l)
-            try: #added this line to avoid keyerror, TODO maybe remove again...
+            try: #avoid key error
                 tags.append(labeldict[l])
                 okcnt += 1
             except Exception as e:

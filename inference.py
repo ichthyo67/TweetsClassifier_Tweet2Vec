@@ -88,6 +88,7 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     precisions = []
     recalls0 = []
     recalls1 = []
+    #corrections with new threshold
     count_corrections = 0
     for xr, y in test_iter:
         n_testsamples +=len(xr)
@@ -105,7 +106,7 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
         for idx, item in enumerate(xr):
             corr = False
             if ranks[idx,:][0] == 1:
-                if abs(vp[idx][0] - vp[idx][1]) < 0.60:
+                if vp[idx][0] < TRSH_CLSSFCN:
                     ranks[idx,:][0] = 0
                     ranks[idx,:][1] = 1
                     count_corrections += 1
@@ -145,6 +146,8 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     print("#"*10, "FINAL OUTPUT", "#"*10)
     print()
     print("%d Tweets tested"%n_testsamples)
+    print("corrections with higher threshold", TRSH_CLSSFCN, ":", count_corrections)
+
     print("Mean Precision weighted", precision_mean / n_testsamples)
     print("Max Precision on Batch", maxprec)
     #standarddeviation = sum((-precision_mean + [prec for prec in precisions])) * 1/(1-n_testsamples)
@@ -154,7 +157,6 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     print("Mean Recall 0", statistics.mean(recalls0), "Stdev", statistics.stdev(recalls0))
     print("Mean Recall 1", statistics.mean(recalls1), "Stdev", statistics.stdev(recalls1))
 
-    print("corrections with higher threshold (0.80):", count_corrections)
     print("#" * 20)
 
 
@@ -166,13 +168,6 @@ def test_test_model():
     test_model(X, y)
 
 
-def test_cs_topics():
-    # test generalization performance of the model
-    X = ["artificial intelligence", "natural language", "information retrieval", "semantic web"]
-    y = ["AI", "NLP", "IR", "SemanticWeb"]
-    test_model(X, y)
-
-
 if __name__ == '__main__':
     # test_infer()
-    test_cs_topics()
+    test_test_model()

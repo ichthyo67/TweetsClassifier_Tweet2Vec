@@ -33,6 +33,7 @@ GRAD_CLIP = 5.  # gradient clipping for regularization
 # thresholds
 T1 = 0.01  # in learning schedule: if change < T1
 T2 = 0.0001  # stopping criterion: if sum(deltas) / len(deltas) < T2
+TRSH_CLSSFCN = 0.8 # label threshold: if 0.8, then classification only if we are 80% sure
 
 # logging and model back ups
 DISPF = 5  # Display frequency
