@@ -1,0 +1,461 @@
+# -*- coding: utf-8 -*-
+'''
+ischwaninger / svakulenko
+02 Mar 2018
+
+Training a character-level NN classifier based on Tweet2Vec implementation by bdhingra
+https://github.com/bdhingra/tweet2vec
+'''
+from collections import Counter, OrderedDict
+import time
+#import cPickle as pkl
+#import _pickle as pkl
+import pickle as pkl
+import sys
+import os
+
+os.environ["THEANO_FLAGS"]="floatX=float32"#, exception_verbosity=high"
+
+import numpy as np
+from sklearn.model_selection import train_test_split
+import lasagne
+import theano
+import theano.tensor as T
+
+from tweet2vec import init_params, tweet2vec
+from evaluate import precision
+from settings import *
+#import sys
+#reload(sys)
+#sys.setdefaultencoding('utf8')
+
+
+
+def build_dictionary(text):
+
+    #print("Building -> ", text)
+    #print("TEXT: ", text)
+    '''
+    Build the character dictionary
+    text: list of tweets
+    '''
+    charcount = Counter()
+    #print(len(text)) #120 for NTWEETS=100
+    for cc in text: #for tweet in all tweets
+        #if type(cc != str):
+            #cc = cc.encode('utf-8', 'ignore')#'utf-8')
+            #cc = cc.decode('utf-8')
+        for c in cc:
+            charcount[c] += 1
+    chars = charcount.keys()
+    #print("CHARS", chars)
+    freqs = charcount.values()
+    list_freqs = list(freqs)
+    #print("FREQS", list_freqs)
+    sorted_idx = np.argsort(list_freqs)[::-1] #python2, used freqs instead of list_freqs
+    chardict = OrderedDict() #like counter, just without counts.
+
+    for idx, sidx in enumerate(sorted_idx):
+        chars_list = list(chars)
+        #print ("generating... ", type(chars_list[sidx]), chars_list[sidx])
+        chardict[chars_list[sidx]] = idx + 1 #chars_list instead of chars, error
+        #chardict[chars[sidx]] = idx + 1
+    #print("charcount", charcount)
+    return chardict, charcount
+
+
+def build_label_dictionary(labels):
+    """
+    Build the label dictionary
+    labels: list of labels
+    """
+    labelcount = Counter()
+    for l in labels:
+        labelcount[l] += 1
+    labels = labelcount.keys()
+    #print(len(labelcount), "labels")
+    freqs = labelcount.values()
+    list_freqs = list(freqs)
+    sorted_idx = np.argsort(list_freqs)[::-1] #python2, used freqs instead of list_freqs
+    chardict = OrderedDict() #like counter, just without counts.
+    #sorted_idx = np.argsort(freqs)[::-1]
+    labels_list = list(labels)
+    #print(labels_list)
+
+    labeldict = OrderedDict()
+    for idx, sidx in enumerate(sorted_idx):
+        labeldict[labels_list[sidx]] = idx
+    #print(labeldict)
+    return labeldict, labelcount
+
+
+def save_dictionary(_dict, count, loc):
+    '''
+    Save a dictionary into the specified location
+    '''
+    with open(loc, 'wb') as f:
+        pkl.dump(_dict, f)
+        pkl.dump(count, f)
+
+class BatchTweets():
+
+    def __init__(self, data, targets, labeldict, batch_size=N_BATCH):
+        #print("TARGETS")
+        #print(targets)
+        errorcnt = 0
+        okcnt = 0
+        # convert targets to indices
+        tags = []
+        for l in targets:
+            #print(l)
+            try: #added this line to avoid keyerror, TODO maybe remove again...
+                tags.append(labeldict[l])
+                okcnt += 1
+            except Exception as e:
+                print("NOT APPENDED", l)
+                errorcnt += 1
+        print("ok: ", okcnt, ", not appended: ", errorcnt)
+        sys.stdout.flush()
+        self.batch_size = batch_size
+        print("Batch Size:", self.batch_size)
+        sys.stdout.flush()
+        self.data = data
+        self.targets = tags
+        #print("TARGETS")
+        #print(tags)
+        #print(len(targets)) #2: text, tweet
+
+
+        self.prepare()
+        self.reset()
+
+    def prepare(self):
+        self.indices = np.arange(len(self.data))
+        self.curr_indices = np.random.permutation(self.indices)
+
+    def reset(self):
+        self.curr_indices = np.random.permutation(self.indices)
+        self.curr_pos = 0
+        self.curr_remaining = len(self.curr_indices)
+
+    def __next__(self):
+        if self.curr_pos >= len(self.indices):
+            self.reset()
+            raise StopIteration()
+
+        # current batch size
+        curr_batch_size = np.minimum(self.batch_size, self.curr_remaining)
+
+        # indices for current batch
+        curr_indices = self.curr_indices[self.curr_pos:self.curr_pos+curr_batch_size]
+        self.curr_pos += curr_batch_size
+        self.curr_remaining -= curr_batch_size
+
+        #print(curr_indices) #len 64
+        #print(len(self.data))
+        #print(len(self.targets))
+        #print("TARGETS LEN", len(self.targets))
+
+        # data and targets for current batch
+        x = [self.data[ii] for ii in curr_indices]
+        #for ii in curr_indices:
+            #print(ii)
+        y = [self.targets[ii] for ii in curr_indices]
+
+        return x, y
+
+    def __iter__(self):
+        return self
+
+
+def schedule(lr):
+    print("Updating learning rate...")
+    sys.stdout.flush()
+    lr = max(1e-5, lr / 2)
+    return lr
+
+
+def prepare_data(seqs_x, chardict, n_chars=MAX_CHAR):
+    """
+    Prepare the data for training - add masks and remove infrequent characters
+
+    """
+    seqsX = []
+    for text in seqs_x:
+        seqsX.append([chardict[c] if c in chardict and chardict[c] <= n_chars else 0 for c in list(text)])
+    seqs_x = seqsX
+
+    lengths_x = [len(s) for s in seqs_x]
+    n_samples = len(seqs_x)
+    x = np.zeros((n_samples, MAX_LENGTH)).astype('int32')
+    x_mask = np.zeros((n_samples, MAX_LENGTH)).astype('float32')
+    #print("CRAZY LOOP")
+    #print(seqs_x)
+    for idx, s_x in enumerate(seqs_x):
+        #print(idx, s_x)
+        #print("S_X", s_x)
+        if (len(s_x) > MAX_LENGTH): #added this, becasuse array was too long for some text...
+            print("exceeds max_len:", len(s_x))
+            tmp = []         #did this to avoid ValueError: cannot copy seq with size len(s_x) to array axis with dimension 280
+            for el in s_x:
+                if len(tmp) < MAX_LENGTH:
+                    tmp.append(el)
+                else:
+                    s_x = tmp
+                    break
+                #(and this)
+        x[idx,:lengths_x[idx]] = s_x
+        x_mask[idx,:lengths_x[idx]] = 1.
+
+    return np.expand_dims(x, axis=2), x_mask
+
+
+def split_dataset(X, y, train_size=0.6, test_size=0.2):
+    '''
+    Split the dataset into training, validation and test sets evenly distributing the class labels samples
+    http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
+    '''
+    hold_size = 1 - train_size
+    X_train, X_hold, y_train, y_hold = train_test_split(X, y, test_size=hold_size, random_state=42, stratify=y)
+    X_validate, X_test, y_validate, y_test = train_test_split(X_hold, y_hold, test_size=test_size/hold_size, random_state=42, stratify=y_hold)
+    return [(X_train, y_train), (X_validate, y_validate), (X_test, y_test)]
+
+
+def classify(tweet, t_mask, params, n_classes, n_chars):
+    # tweet embedding
+    emb_layer = tweet2vec(tweet, t_mask, params, n_chars)
+
+    # Dense layer for classes
+    l_dense = lasagne.layers.DenseLayer(emb_layer, n_classes, W=params['W_cl'], b=params['b_cl'], nonlinearity=lasagne.nonlinearities.softmax)
+
+    return lasagne.layers.get_output(l_dense), l_dense, lasagne.layers.get_output(emb_layer)
+
+
+def train_model(Xt, yt, Xv, yv, save_path=MODEL_PATH,
+          num_epochs=NUM_EPOCHS, lr=LEARNING_RATE, mu=MOMENTUM,
+          reg=REGULARIZATION, sch=SCHEDULE):
+    '''
+    Xt, yt        X,y arrays with training data
+    Xv, yv        X,y arrays with validation data split
+    save_path     path to store the trained model
+    '''
+
+    global T1
+    print("Initializing model...")
+    sys.stdout.flush()
+
+    # Build dictionaries from training data
+    chardict, charcount = build_dictionary(Xt)
+
+    n_char = len(chardict.keys()) + 1
+    MAX_CHAR = n_char
+    print(n_char, "unique characters")
+    sys.stdout.flush()
+    save_dictionary(chardict, charcount, '%s/dict.pkl' % save_path)
+
+    # params (weights): #layers, #neurons per layer, #training iterations, #hidden neurons, learning rate, momentum parameter, etc
+    params = init_params(n_chars=n_char)
+
+
+    labeldict, labelcount = build_label_dictionary(yt)
+    save_dictionary(labeldict, labelcount, '%s/label_dict.pkl' % save_path)
+
+    n_classes = len(labeldict.keys())
+    #print("#classes:", n_classes)
+
+    # classification params
+    params['W_cl'] = theano.shared(np.random.normal(loc=0., scale=SCALE, size=(LDIM, n_classes)).astype('float32'), name='W_cl', borrow=True) #changed from float32
+    params['b_cl'] = theano.shared(np.zeros((n_classes)).astype('float32'), name='b_cl') #changed from 'float32'
+
+    # iterators
+    train_iter = BatchTweets(Xt, yt, labeldict, batch_size=N_BATCH)
+    val_iter = BatchTweets(Xv, yv, labeldict, batch_size=N_BATCH)
+
+    print("Building...")
+    sys.stdout.flush()
+
+    # Tweet variables
+    tweet = T.itensor3()
+    targets = T.ivector()
+
+    # masks
+    t_mask = T.fmatrix()
+
+    # network for prediction
+    predictions, net, emb = classify(tweet, t_mask, params, n_classes, n_char)
+
+    # batch loss
+    loss = lasagne.objectives.categorical_crossentropy(predictions, targets)
+    cost = T.mean(loss) + reg * lasagne.regularization.regularize_network_params(net, lasagne.regularization.l2)
+    cost_only = T.mean(loss)
+    reg_only = reg * lasagne.regularization.regularize_network_params(net, lasagne.regularization.l2)
+
+    # updates
+    print("Computing updates...")
+    sys.stdout.flush()
+
+    updates = lasagne.updates.nesterov_momentum(cost, lasagne.layers.get_all_params(net), lr, momentum=mu)
+
+    # Theano functions
+    print("Compiling theano functions...")
+    sys.stdout.flush()
+    inps = [tweet, t_mask, targets]
+    predict = theano.function([tweet, t_mask], predictions)
+    cost_val = theano.function(inps, [cost_only, emb])
+
+    train = theano.function(inps, cost, updates=updates)
+    reg_val = theano.function([], reg_only)
+
+    # Training
+    print("Training...")
+    sys.stdout.flush()
+    uidx = 0
+    maxp = 0.
+    start = time.time()
+    valcosts = []
+    for epoch in range(num_epochs):
+        n_samples = 0
+        train_cost = 0.
+        print("Epoch {}".format(epoch))
+        sys.stdout.flush()
+
+        # learning schedule
+        if len(valcosts) > 1 and sch:
+            change = (valcosts[-1] - valcosts[-2]) / abs(valcosts[-2])
+            if change < T1:
+                lr = schedule(lr)
+                updates = lasagne.updates.nesterov_momentum(cost, lasagne.layers.get_all_params(net), lr, momentum=mu)
+                train = theano.function(inps, cost, updates=updates)
+                T1 = T1 / 2
+
+        # stopping criterion: runs for minimum 7 epochs
+        if len(valcosts) > 6:
+            deltas = []
+            for i in range(5):
+                deltas.append((valcosts[-i-1] - valcosts[-i-2]) / abs(valcosts[-i-2]))
+            if sum(deltas) / len(deltas) < T2:
+                break
+
+        ud_start = time.time()
+        for xr, y in train_iter:
+            n_samples +=len(xr)
+            uidx += 1
+            x, x_m = prepare_data(xr, chardict, n_chars=n_char)
+            if x is None:
+                print("Minibatch with zero samples under maxlength.")
+                sys.stdout.flush()
+                uidx -= 1
+                continue
+
+        curr_cost = train(x, x_m, y)
+        train_cost += curr_cost * len(xr)
+        ud = time.time() - ud_start
+
+        if np.isnan(curr_cost) or np.isinf(curr_cost):
+            print("Nan detected.")
+            sys.stdout.flush()
+            return
+
+        if np.mod(uidx, DISPF) == 0:
+            print("Epoch {} Update {} Cost {} Time {}".format(epoch, uidx, curr_cost, ud))
+            sys.stdout.flush()
+
+        if np.mod(uidx,SAVEF) == 0:
+            print("Saving...")
+            sys.stdout.flush()
+
+        saveparams = OrderedDict()
+        for kk, vv in params.items():#params.iteritems():
+            saveparams[kk] = vv.get_value()
+            np.savez('%s/model.npz' % save_path, **saveparams)
+
+        print("Done.")
+        sys.stdout.flush()
+
+        print("Testing on Validation set...")
+        sys.stdout.flush()
+
+        preds = []
+        targs = []
+
+        for xr,y in val_iter:
+            x, x_m = prepare_data(xr, chardict, n_chars=n_char)
+            if x is None:
+                print("Validation: Minibatch with zero samples under maxlength.")
+                sys.stdout.flush()
+                continue
+
+            vp = predict(x, x_m)
+            ranks = np.argsort(vp)[:,::-1]
+            for idx, item in enumerate(xr):
+                preds.append(ranks[idx,:])
+                targs.append(y[idx])
+
+            # compute precision @1
+            validation_cost = precision(np.asarray(preds), targs, 1)
+            regularization_cost = reg_val()
+
+            if validation_cost > maxp:
+                maxp = validation_cost
+                saveparams = OrderedDict()
+                for kk,vv in params.items():
+                    saveparams[kk] = vv.get_value()
+                np.savez('%s/best_model.npz' % (save_path), **saveparams)
+
+        print("Epoch {} Training Cost {} Validation Precision {} Regularization Cost {} Max Precision {}".format(epoch, train_cost/n_samples, validation_cost, regularization_cost, maxp))
+        print("Seen {} samples.".format(n_samples))
+        sys.stdout.flush()
+        valcosts.append(validation_cost)
+
+        print("Saving...")
+        sys.stdout.flush()
+        saveparams = OrderedDict()
+        for kk, vv in params.items():
+            saveparams[kk] = vv.get_value()
+        np.savez('%s/model_%d.npz' % (save_path,epoch),**saveparams)
+        print("Done.")
+        sys.stdout.flush()
+
+        # stopping criterion: reached maximum precision on the validation set
+        if validation_cost == 1.0:
+            break
+
+    print("Finish. Total training time = {}".format(time.time()-start))
+    sys.stdout.flush()
+
+
+def test_split_dataset():
+    '''
+    Generate sample dataset with 100 samples and split it into 3 sets
+    '''
+    #1:1, 2:3, 3:4, 4:3, 5:4
+    X = [1, 2, 3, 4, 5, 2, 3, 4, 3, 5, 5, 2, 3, 4, 5]
+    y = [True, False, True, True, True, False, True, False, True, False, True, False, True, False, True]
+    (X_train, y_train), (X_validate, y_validate), (X_test, y_test) = split_dataset(X, y)
+    assert True in y_train and False in y_train
+    assert True in y_validate and False in y_validate
+    assert True in y_test and False in y_test
+   # print("X TRAIN", X_train)
+   # print ("Y TRAIN", y_train)
+   # print("X VALIDATE", X_validate)
+   # print("Y VALIDATE", y_validate)
+   # print("X TEST", X_test)
+   # print("Y TEST", y_test)
+
+
+def test_train_model():
+    '''
+    Sample dataset for binary classification test
+    '''
+    X_train = ["hot and warm", "hot and ", "oh hot ", "im cold and freezing", "me cold", "cold anyways "]
+    y_train = ["hot", "hot", "hot", "cold", "cold", "cold"]
+
+    X_validate = ["hot and nice", "not cold and nice"]
+    y_validate = ["hot", "cold"]
+
+    train_model(X_train, y_train, X_validate, y_validate, save_path=MODEL_PATH)
+
+
+if __name__ == '__main__':
+    #test_split_dataset()
+    test_train_model()
