@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 ischwaninger
-03 March 2018
+19 April 2018
 
 load wickedonna tweets and random weibo tweets from sqlite database
 '''
@@ -37,7 +37,7 @@ def load_data_from_sqlite(db, table, max_len, min_len, limit, random="true"):
                 return X, y
     return X, y
 
-#get clean_text, label fom sqlite database table
+#get clean_text, label fom sqlite database table - testing database
 #@random = true for tweets in random order
 def load_data_from_sqlite_test(db, table, max_len, min_len, limit, random="true"):
 

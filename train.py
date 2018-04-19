@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-ischwaninger / svakulenko
+ischwaninger
 18 Apr 2018
 
-Training a character-level NN classifier based on Tweet2Vec implementation by bdhingra
+Training a character-level NN classifier based on Tweet2Vec implementation by vendi12, bdhingra
+https://github.com/vendi12/TweetsClassifier
 https://github.com/bdhingra/tweet2vec
 '''
 from collections import Counter, OrderedDict

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-ischwaninger / svakulenko
+ischwaninger
 03 March 2018
 
-Run inference on the pretrained model based on Tweet2Vec implementation by bdhingra: test_char.py
-https://github.com/bdhingra/tweet2vec
+Run inference on the pretrained model based on Tweet2Vec implementation by vendi12; bdhingra: test_char.py
+https://github.com/bdhingra/tweet2vec, https://github.com/vendi12/TweetsClassifier
 '''
 from collections import OrderedDict
 import pickle as pkl

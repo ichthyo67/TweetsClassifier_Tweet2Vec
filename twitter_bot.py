@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-svakulenko
-27 December 2017
+ischwaninger
+03 March 2018
 
 Pass tweets through the classifier and retweet
+implementation by vendi12 
+https://github.com/vendi12/TweetsClassifier 
 '''
 import string
 import cPickle as pkl

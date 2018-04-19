@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-ischwaninger / svakulenko
-01 April 2018
+ischwaninger
+18 April 2018
 
 Load tweets from database and train Tweet2Vec NN model
 '''

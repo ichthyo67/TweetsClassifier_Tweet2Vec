@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-svakulenko
-2 December 2017
+ischwaninger
+18 April 2018
 
-Character-level neural network architecture based on Tweet2Vec implementation by bdhingra
+Character-level neural network architecture based on Tweet2Vec implementation by bdhingra, vendi12
 https://github.com/bdhingra/tweet2vec
+https://github.com/vendi12/TweetsClassifier
 '''
 from collections import OrderedDict
 

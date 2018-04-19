@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-ischwaninger / svakulenko
+ischwaninger
 01 April 2018
 
 Standard evaluation metrics for a classifier performance based on Tweet2Vec implementation by bdhingra
 https://github.com/bdhingra/tweet2vec
+TODO: get other metrics
 '''
 import numpy as np
 
