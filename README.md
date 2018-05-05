@@ -1,7 +1,5 @@
 # TweetsClassifier_Tweet2Vec
 
-run.py:
+Binary Classifier for Chinese weibo tweets based on Tweet2Vec
 
-binary Classifier for Chinese weibo tweets based on Tweet2Vec
-
-Training and validation set: Wickedonna database and random weibo Tweets
+The classifier was trained for research project "The Microfoundations of Authoritarian Responsiveness", Universität Wien, Sinologie
