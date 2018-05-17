@@ -34,34 +34,27 @@ from settings import *
 
 def build_dictionary(text):
 
-    #print("Building -> ", text)
-    #print("TEXT: ", text)
     '''
     Build the character dictionary
     text: list of tweets
     '''
-    charcount = Counter()
-    #print(len(text)) #120 for NTWEETS=100
+    charcount = Counter() 
     for cc in text: #for tweet in all tweets
-        #if type(cc != str):
-            #cc = cc.encode('utf-8', 'ignore')#'utf-8')
-            #cc = cc.decode('utf-8')
         for c in cc:
             charcount[c] += 1
     chars = charcount.keys()
-    #print("CHARS", chars)
+
     freqs = charcount.values()
     list_freqs = list(freqs)
-    #print("FREQS", list_freqs)
-    sorted_idx = np.argsort(list_freqs)[::-1] #python2, used freqs instead of list_freqs
+
+    sorted_idx = np.argsort(list_freqs)[::-1] 
     chardict = OrderedDict() #like counter, just without counts.
 
     for idx, sidx in enumerate(sorted_idx):
         chars_list = list(chars)
-        #print ("generating... ", type(chars_list[sidx]), chars_list[sidx])
-        chardict[chars_list[sidx]] = idx + 1 #chars_list instead of chars, error
-        #chardict[chars[sidx]] = idx + 1
-    #print("charcount", charcount)
+
+        chardict[chars_list[sidx]] = idx + 1
+
     return chardict, charcount
 
 
@@ -74,14 +67,14 @@ def build_label_dictionary(labels):
     for l in labels:
         labelcount[l] += 1
     labels = labelcount.keys()
-    #print(len(labelcount), "labels")
+
     freqs = labelcount.values()
     list_freqs = list(freqs)
-    sorted_idx = np.argsort(list_freqs)[::-1] #python2, used freqs instead of list_freqs
-    chardict = OrderedDict() #like counter, just without counts.
+    sorted_idx = np.argsort(list_freqs)[::-1] 
+    chardict = OrderedDict() 
     #sorted_idx = np.argsort(freqs)[::-1]
     labels_list = list(labels)
-    #print(labels_list)
+
 
     labeldict = OrderedDict()
     for idx, sidx in enumerate(sorted_idx):
@@ -101,14 +94,13 @@ def save_dictionary(_dict, count, loc):
 class BatchTweets():
 
     def __init__(self, data, targets, labeldict, batch_size=N_BATCH):
-        #print("TARGETS")
-        #print(targets)
+
         errorcnt = 0
         okcnt = 0
         # convert targets to indices
         tags = []
         for l in targets:
-            #print(l)
+
             try: #avoid key error
                 tags.append(labeldict[l])
                 okcnt += 1
@@ -122,10 +114,8 @@ class BatchTweets():
         sys.stdout.flush()
         self.data = data
         self.targets = tags
-        #print("TARGETS")
-        #print(tags)
-        #print(len(targets)) #2: text, tweet
 
+        #print(len(targets)) #2 for binary classifier
 
         self.prepare()
         self.reset()
@@ -154,13 +144,9 @@ class BatchTweets():
 
         #print(curr_indices) #len 64
         #print(len(self.data))
-        #print(len(self.targets))
-        #print("TARGETS LEN", len(self.targets))
 
         # data and targets for current batch
         x = [self.data[ii] for ii in curr_indices]
-        #for ii in curr_indices:
-            #print(ii)
         y = [self.targets[ii] for ii in curr_indices]
 
         return x, y
@@ -190,21 +176,18 @@ def prepare_data(seqs_x, chardict, n_chars=MAX_CHAR):
     n_samples = len(seqs_x)
     x = np.zeros((n_samples, MAX_LENGTH)).astype('int32')
     x_mask = np.zeros((n_samples, MAX_LENGTH)).astype('float32')
-    #print("CRAZY LOOP")
-    #print(seqs_x)
+
     for idx, s_x in enumerate(seqs_x):
-        #print(idx, s_x)
-        #print("S_X", s_x)
-        if (len(s_x) > MAX_LENGTH): #added this, becasuse array was too long for some text...
-            print("exceeds max_len:", len(s_x))
-            tmp = []         #did this to avoid ValueError: cannot copy seq with size len(s_x) to array axis with dimension 280
+
+        if (len(s_x) > MAX_LENGTH):
+            print("exceeds max_len:", len(s_x)) #debug
+            tmp = [] #avoid ValueError: cannot copy seq with size len(s_x) to array axis with dimension 280
             for el in s_x:
                 if len(tmp) < MAX_LENGTH:
                     tmp.append(el)
                 else:
                     s_x = tmp
                     break
-                #(and this)
         x[idx,:lengths_x[idx]] = s_x
         x_mask[idx,:lengths_x[idx]] = 1.
 
@@ -257,16 +240,14 @@ def train_model(Xt, yt, Xv, yv, save_path=MODEL_PATH,
     # params (weights): #layers, #neurons per layer, #training iterations, #hidden neurons, learning rate, momentum parameter, etc
     params = init_params(n_chars=n_char)
 
-
     labeldict, labelcount = build_label_dictionary(yt)
     save_dictionary(labeldict, labelcount, '%s/label_dict.pkl' % save_path)
 
     n_classes = len(labeldict.keys())
-    #print("#classes:", n_classes)
 
     # classification params
-    params['W_cl'] = theano.shared(np.random.normal(loc=0., scale=SCALE, size=(LDIM, n_classes)).astype('float32'), name='W_cl', borrow=True) #changed from float32
-    params['b_cl'] = theano.shared(np.zeros((n_classes)).astype('float32'), name='b_cl') #changed from 'float32'
+    params['W_cl'] = theano.shared(np.random.normal(loc=0., scale=SCALE, size=(LDIM, n_classes)).astype('float32'), name='W_cl', borrow=True) 
+    params['b_cl'] = theano.shared(np.zeros((n_classes)).astype('float32'), name='b_cl') 
 
     # iterators
     train_iter = BatchTweets(Xt, yt, labeldict, batch_size=N_BATCH)
@@ -366,7 +347,7 @@ def train_model(Xt, yt, Xv, yv, save_path=MODEL_PATH,
             sys.stdout.flush()
 
         saveparams = OrderedDict()
-        for kk, vv in params.items():#params.iteritems():
+        for kk, vv in params.items():
             saveparams[kk] = vv.get_value()
             np.savez('%s/model.npz' % save_path, **saveparams)
 

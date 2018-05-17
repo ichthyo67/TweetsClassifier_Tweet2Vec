@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-ischwaninger
-03 March 2018
+svakulenko
+dec 2018
 
 Pass tweets through the classifier and retweet
-implementation by vendi12 
 https://github.com/vendi12/TweetsClassifier 
 '''
 import string
@@ -90,13 +89,6 @@ class TweetClassifier(StreamListener):
             # classify
             prediction = self.classify([tweet_text])
             print prediction
-            # if job_tweet_prediction > 0.73:
-            #     print tweet_text
-            #     print job_tweet_prediction
-            #     # retweet
-            #     self.api.update_status(status='https://twitter.com/%s/status/%s' % (tweet['user']['screen_name'], tweet['id']))
-            # retweet
-            # twitter_client.retweet(id=tweet_id)
 
     def on_error(self, status_code):
         print (status_code, 'error code')
@@ -108,15 +100,13 @@ def stream_tweets():
     '''
     # get users from list
     listener = TweetClassifier()
-    # members = [member.id_str for member in Cursor(listener.api.list_members, MY_NAME, LIST).items()]
 
     # start streaming
     while True:
         try:
             stream = Stream(listener.auth_handler, listener)
             print ('Listening...')
-            # stream.filter(track=["#nlpproc"])
-            # stream.filter(follow=members)
+
             stream.sample(languages=['en'])
         except Exception as e:
             # reconnect on exceptions

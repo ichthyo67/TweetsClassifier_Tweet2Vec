@@ -11,7 +11,7 @@ import sqlite3
 
 #get clean_text, label fom sqlite database table
 #@random = true for tweets in random order
-def load_data_from_sqlite(db, table, max_len, min_len, limit, random="true"):
+def load_data_from_sqlite(db, table, max_len, min_len, limit, random=True):
 
     #connect to db
     conn = sqlite3.connect(db)
@@ -24,8 +24,8 @@ def load_data_from_sqlite(db, table, max_len, min_len, limit, random="true"):
     cur.execute(statement)
     data = cur.fetchall()
 
-    X = [] #clean_text
-    y = [] #label
+    X = []
+    y = [] 
 
     count = 0
     for entry in data:
@@ -39,7 +39,7 @@ def load_data_from_sqlite(db, table, max_len, min_len, limit, random="true"):
 
 #get clean_text, label fom sqlite database table - testing database
 #@random = true for tweets in random order
-def load_data_from_sqlite_test(db, table, max_len, min_len, limit, random="true"):
+def load_data_from_sqlite_test(db, table, max_len, min_len, limit, random=True):
 
     #connect to db
     conn = sqlite3.connect(db)
@@ -52,8 +52,8 @@ def load_data_from_sqlite_test(db, table, max_len, min_len, limit, random="true"
     cur.execute(statement)
     data = cur.fetchall()
 
-    X = [] #clean_text
-    y = [] #label
+    X = []
+    y = [] 
 
     count = 0
     for entry in data:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-ischwaninger
-18 April 2018
+svakulenko
+dec 2017
 
 Character-level neural network architecture based on Tweet2Vec implementation by bdhingra, vendi12
 https://github.com/bdhingra/tweet2vec

@@ -12,17 +12,17 @@ from inference import test_model
 from settings import *
 import sys
 
-#Start Neural Network: load data, split data, run Tweet2Vec RNN, test best model
+#Start Neural Network: load data, split data, run Tweet2Vec RNN: test model
 def test_protest_classifier():
     # load wicked tweets
-    X1, y1 = load_data_from_sqlite("Tweets_Protest_Random_Test.db", "ProtestTweets", MAX_LENGTH, MIN_LENGTH, 1, random="true")
+    X1, y1 = load_data_from_sqlite("Tweets_Protest_Random_Test.db", "ProtestTweets", MAX_LENGTH, MIN_LENGTH, 1, random=True)
 
     assert X1
     assert y1
     print(len(X1), 'wicked samples loaded')
 
     # load random tweets
-    X2, y2 = load_data_from_sqlite_test("Tweets_Protest_Random_Test.db", "RandomTweets", MAX_LENGTH, MIN_LENGTH, NTWEETS, random="true")
+    X2, y2 = load_data_from_sqlite_test("Tweets_Protest_Random_Test.db", "RandomTweets", MAX_LENGTH, MIN_LENGTH, NTWEETS, random=True)
     assert X2
     assert y2
     print(len(X2), 'random sample loaded')

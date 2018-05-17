@@ -82,7 +82,7 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     #test on entire set -> iterate, and memorize
     precision_mean = 0
     test_iter = BatchTweets(Xt, yt, labeldict, batch_size=N_BATCH)
-    #for i in range (0, len_batches):
+
     n_testsamples = 0
     maxprec = 0.
     precisions = []
@@ -90,18 +90,18 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     recalls1 = []
     #corrections with new threshold
     count_corrections = 0
-    classified_1 = 0 #how many were classified in total?
+    #classified 1 in total
+    classified_1 = 0
     for xr, y in test_iter:
         n_testsamples +=len(xr)
         preds = []
         targs = []
 
-        #xr, y = testBatches[i] #list
         x, x_m = prepare_data(xr, chardict, n_chars=n_char)
         vp = predict(x, x_m)
-        #print("VP", vp)
+
         #np.argsort returns [0, 1] or [1, 0] according to vp floats
-        #TODO: add weights to certain characters here or earlier?
+        #TODO: add weights to certain characters / words here or earlier
         ranks = np.argsort(vp)[:, ::-1]
         #print("RANKS", ranks)
         for idx, item in enumerate(xr):
@@ -116,7 +116,7 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
                     classified_1 += 1
             preds.append(ranks[idx,:])
             targs.append(y[idx])
-            #print("Xt LEN", len(Xt), "INDEX: ", idx)
+
             if not corr:
                 print(xr[idx], ranks[idx,:][0], y[idx])
             else:
@@ -144,7 +144,6 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
             maxprec = validation_cost
         precision_mean += validation_cost*len(xr)
 
-        # print [labeldict.keys()[rank[0]] for rank in ranks]
     print()
     print("#"*10, "FINAL OUTPUT", "#"*10)
     print()
@@ -161,7 +160,6 @@ def test_model(Xt, yt, model_path=MODEL_PATH):
     print("Mean Recall 1", statistics.mean(recalls1), "Stdev", statistics.stdev(recalls1))
 
     print("#" * 20)
-
 
 
 def test_test_model():

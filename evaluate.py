@@ -28,8 +28,8 @@ def precision(p, t, k):
 def recall(p, t, tx):
 
     #count targets
-    tp = 0 #true positives
-    fn = 0 #false negatives
+    tp = 0 
+    fn = 0 
     for i in range (0, len(p)):
         if t[i] == tx and p[i] == tx:
             tp += 1
